@@ -6,7 +6,7 @@
 int main() {
   boost::asio::io_context io;
 
-  Server server(io, 8080);
+  Server server(io, 6379);
 
   boost::asio::signal_set signals(io, SIGINT, SIGTERM);
   signals.async_wait([&](const boost::system::error_code& error,

@@ -5,6 +5,7 @@
 
 #include "global.hpp"
 #include "session.hpp"
+#include "store.hpp"
 
 using boost::asio::ip::tcp;
 
@@ -25,6 +26,11 @@ class Server {
   }
 
  private:
+  boost::asio::io_context& io_;
+  tcp::acceptor acceptor_;
+  std::set<std::shared_ptr<Session>> session_set;
+  Store store;
+
   boost::asio::awaitable<void> start_listen(void) {
     std::cout << "Server is listening on Port "
               << this->acceptor_.local_endpoint().port() << "\n";
@@ -33,7 +39,7 @@ class Server {
         auto client =
             co_await this->acceptor_.async_accept(boost::asio::use_awaitable);
 
-        auto session = std::make_shared<Session>(std::move(client));
+        auto session = std::make_shared<Session>(std::move(client), store);
 
         boost::asio::co_spawn(
             this->io_,
@@ -45,7 +51,8 @@ class Server {
 
         session_set.insert(session);
 
-        std::cout << "[acpt] size: " << session_set.size() << '\n';
+        std::cout << "[conn] simultaneous coneection(s): " << session_set.size()
+                  << '\n';
       } catch (const boost::system::system_error& error) {
         if (error.code() == boost::asio::error::operation_aborted) {
           break;
@@ -54,8 +61,4 @@ class Server {
       }
     }
   }
-
-  boost::asio::io_context& io_;
-  tcp::acceptor acceptor_;
-  std::set<std::shared_ptr<Session>> session_set;
 };
