@@ -45,16 +45,17 @@ class Session {
   boost::asio::streambuf buffer{65536};
   Store& store;
 
-  boost::asio::awaitable<std::pair<std::string, size_t>> recv(void) {
+  // 반환된 string_view는 consume() 전까지만 유효
+  boost::asio::awaitable<std::pair<std::string_view, size_t>> recv(void) {
     auto n = co_await boost::asio::async_read_until(
         this->client_socket, this->buffer, '\n', boost::asio::use_awaitable);
 
-    std::string s(boost::asio::buffers_begin(this->buffer.data()),
-                  boost::asio::buffers_begin(this->buffer.data()) + n);
+    std::string_view s(static_cast<const char*>(this->buffer.data().data()), n);
 
-    while (!s.empty() && (s.back() == '\n' || s.back() == '\r')) s.pop_back();
+    while (!s.empty() && (s.back() == '\n' || s.back() == '\r'))
+      s.remove_suffix(1);
 
-    co_return std::pair(std::move(s), n);
+    co_return std::pair(s, n);
   }
 
   boost::asio::awaitable<void> send_reply(const Reply& reply) {

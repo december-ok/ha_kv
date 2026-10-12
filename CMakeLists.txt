@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.30)
+cmake_minimum_required(VERSION 3.24...3.30)
 project(AsioApp CXX)
 
 # C++23 표준 설정
@@ -19,3 +19,6 @@ target_link_libraries(my_asio_app PRIVATE Boost::headers)
 # 4. 멀티스레드 지원
 find_package(Threads REQUIRED)
 target_link_libraries(my_asio_app PRIVATE Threads::Threads)
+
+# 5. 경고 옵션
+target_compile_options(my_asio_app PRIVATE -Wall -Wextra -Wconversion)

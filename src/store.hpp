@@ -36,6 +36,10 @@ struct ErrorReply {
 using Reply = std::variant<SimpleStringReply, BulkStringReply,
                            NullBulkStringReply, IntegerReply, ErrorReply>;
 
+static inline bool is_equal(std::string_view a, std::string_view b) {
+  return a.size() == b.size() && strncasecmp(a.data(), b.data(), a.size()) == 0;
+}
+
 class Store {
  private:
   boost::unordered::unordered_map<std::string, std::string, TransparentHash,
@@ -75,23 +79,25 @@ class Store {
     return std::nullopt;
   }
 
-  int del(std::string_view key) { return kv_map.erase(key); }
+  size_t del(std::string_view key) { return kv_map.erase(key); }
 
  public:
   Reply process(std::string_view str) {
+#ifndef NDEBUG
     std::cout << "[recv] " << str << '\n';
+#endif
     std::vector<std::string_view> cmd_list = split(str);
 
     if (cmd_list.size() <= 0) return ErrorReply{"wrong command"};
 
     std::string_view main_cmd = cmd_list[0];
 
-    if (main_cmd == CMD_SET) {
+    if (is_equal(main_cmd, CMD_SET)) {
       if (cmd_list.size() != 3) return ErrorReply{"wrong number of arguments"};
       this->set(cmd_list[1], cmd_list[2]);
 
       return SimpleStringReply{"OK"};
-    } else if (main_cmd == CMD_GET) {
+    } else if (is_equal(main_cmd, CMD_GET)) {
       if (cmd_list.size() != 2) return ErrorReply{"wrong number of arguments"};
 
       auto value = this->get(cmd_list[1]);
@@ -100,7 +106,7 @@ class Store {
       }
 
       return NullBulkStringReply{};
-    } else if (main_cmd == CMD_DEL) {
+    } else if (is_equal(main_cmd, CMD_DEL)) {
       if (cmd_list.size() != 2) return ErrorReply{"wrong number of arguments"};
 
       return IntegerReply{static_cast<std::int64_t>(this->del(cmd_list[1]))};
